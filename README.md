@@ -20,3 +20,7 @@ skill 不采集清单、不写服务状态。
 - [`service/references/`](service/references/)：清单字段说明。
 
 项目使用 MIT 许可证，见 [`LICENSE`](LICENSE)。
+
+---
+
+友情链接：[LINUX DO](https://linux.do/) — 新的理想型社区

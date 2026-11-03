@@ -1,0 +1,47 @@
+{
+  "defaults": {
+    "distribution": "one-to-one",
+    "max_gpu_utilization_percent": 5,
+    "env_manager": "uv",
+    "artifacts": [
+      {
+        "name": "project",
+        "kind": "source",
+        "source": ".",
+        "destination": "{work_dir}/projects/project"
+      }
+    ]
+  },
+  "tasks": [
+    {
+      "id": "prepare-data",
+      "command": "cd {work_dir}/projects/project && uv run python scripts/prepare_data.py --output {work_dir}/prepared",
+      "gpus": 1,
+      "distribution": "single",
+      "min_cpu_cores": 4,
+      "min_memory": "16GiB",
+      "min_disk": "100GiB",
+      "uv_env": "uv"
+    },
+    {
+      "id": "train-folds",
+      "command": "cd {work_dir}/projects/project && uv run python scripts/train.py --fold {rank} --world-size {world_size}",
+      "gpus": 4,
+      "distribution": "one-to-one",
+      "gpu_type": "A100",
+      "min_gpu_memory_gib": 40,
+      "min_memory": "32GiB",
+      "depends_on": ["prepare-data"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    {
+      "id": "evaluate",
+      "command": "cd {work_dir}/projects/project && uv run python scripts/evaluate.py --checkpoint checkpoints/best.pt",
+      "gpus": 1,
+      "distribution": "single",
+      "depends_on": ["train-folds"]
+    }
+  ]
+}

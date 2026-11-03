@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+"""使用内置模块启动资源看板服务。"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+
+SERVICE_ROOT = Path(__file__).resolve().parents[1]
+
+for required in (
+    SERVICE_ROOT / "adaptive_core" / "__init__.py",
+    SERVICE_ROOT / "adaptive_service" / "app.py",
+):
+    if not required.is_file():
+        raise SystemExit(f"resource board runtime is missing: {required}")
+
+sys.path.insert(0, str(SERVICE_ROOT))
+
+from adaptive_service.cli import main  # noqa: E402
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,19 @@
+{
+  "server": "https://<controller>.<tailnet>.ts.net:8443",
+  "ssh_proxy": {
+    "alias": "<proxy-alias>",
+    "host": "<controller-host>",
+    "port": 22,
+    "user": "<ssh-user>",
+    "identity_file": "~/.ssh/<key-file>",
+    "remote_forward": "127.0.0.1:18005",
+    "local_proxy_port": 7890
+  },
+  "nodes": {
+    "GPU-01": {
+      "work": "/<data-disk>/<user>/adaptive",
+      "data": "/<data-disk>/<user>/adaptive/data",
+      "model": "/<data-disk>/<user>/adaptive/models"
+    }
+  }
+}

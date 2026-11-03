@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --python ${{ matrix.python-version }}
+
+      - name: Compile
+        run: uv run python -m compileall -q skill service
+
+      - name: Skill tests
+        run: uv run python -m pytest -q skill/tests
+
+      - name: Service tests
+        run: uv run python -m pytest -q service/tests
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: service/frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix service/frontend
+
+      - name: Build frontend
+        run: npm run build --prefix service/frontend

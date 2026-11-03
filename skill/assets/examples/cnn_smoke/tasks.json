@@ -1,0 +1,60 @@
+{
+  "defaults": {
+    "placement": "spread",
+    "max_gpu_utilization_percent": 5,
+    "min_gpu_free_memory_gib": "8GiB",
+    "min_cpu_cores": 2,
+    "min_memory": "4GiB",
+    "min_disk": "8GiB",
+    "nodes": [
+      "GPU-01",
+      "GPU-02",
+      "GPU-03",
+      "GPU-04",
+      "GPU-05"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "setup-cnn-smoke",
+      "command": "set -eu; export UV_LOCK_TIMEOUT=900; SECONDS=0; ROOT=\"{work_dir}\"; PROJECT=\"$ROOT/projects/cnn_smoke\"; ENV=\"$ROOT/envs/cnn_smoke\"; mkdir -p \"$ROOT/tools\" \"$ROOT/python\" \"$ROOT/cache/uv\" \"$ROOT/tmp\" \"$ROOT/config\" \"$PROJECT\" \"$ENV\" \"$ROOT/runs\"; UV=\"$ROOT/tools/uv\"; if [ ! -x \"$UV\" ] || ! \"$UV\" --version 2>/dev/null | grep -Eq '^uv 0\\.12\\.15([[:space:]]|$)'; then curl --fail --location --proto '=https' --tlsv1.2 --retry 3 --silent --show-error https://astral.sh/uv/0.12.15/install.sh -o \"$ROOT/tmp/uv-install.sh\"; printf '%s  %s\\n' '716a1d6844740756c68770fcec2f79c2013fb9b03869a113f61e15f6f482a6a1' \"$ROOT/tmp/uv-install.sh\" | sha256sum -c -; UV_INSTALL_DIR=\"$ROOT/tools\" UV_NO_MODIFY_PATH=1 XDG_CONFIG_HOME=\"$ROOT/config\" TMPDIR=\"$ROOT/tmp\" sh \"$ROOT/tmp/uv-install.sh\" --no-modify-path; fi; test -x \"$UV\"; \"$UV\" --version | grep -Eq '^uv 0\\.12\\.15([[:space:]]|$)'; UV_CACHE_DIR=\"$ROOT/cache/uv\" UV_PYTHON_INSTALL_DIR=\"$ROOT/python\" UV_TOOL_DIR=\"$ROOT/tools\" XDG_CONFIG_HOME=\"$ROOT/config\" TMPDIR=\"$ROOT/tmp\" \"$UV\" python install --install-dir \"$ROOT/python\" --no-bin 3.10; UV_CACHE_DIR=\"$ROOT/cache/uv\" UV_PYTHON_INSTALL_DIR=\"$ROOT/python\" UV_TOOL_DIR=\"$ROOT/tools\" UV_PROJECT_ENVIRONMENT=\"$ENV\" XDG_CONFIG_HOME=\"$ROOT/config\" TMPDIR=\"$ROOT/tmp\" \"$UV\" sync --frozen --project \"$PROJECT\" --python 3.10; UV_CACHE_DIR=\"$ROOT/cache/uv\" UV_PYTHON_INSTALL_DIR=\"$ROOT/python\" UV_TOOL_DIR=\"$ROOT/tools\" UV_PROJECT_ENVIRONMENT=\"$ENV\" XDG_CONFIG_HOME=\"$ROOT/config\" TMPDIR=\"$ROOT/tmp\" \"$UV\" run --frozen --project \"$PROJECT\" --python 3.10 python -c 'import torch; assert torch.cuda.is_available(); print(torch.__version__, torch.version.cuda, torch.cuda.get_device_name(0))'; printf 'OPENSMI_SETUP_ELAPSED_S=%s\\n' \"$SECONDS\"",
+      "gpus": 1,
+      "replicas": 4,
+      "min_nodes": 4,
+      "max_nodes": 4,
+      "distribution": "one-to-one",
+      "environment_maintenance": true,
+      "metadata": {
+        "role": "environment_maintenance",
+        "purpose": "repair data-disk uv environment and validate CUDA torch"
+      }
+    },
+    {
+      "id": "train-cnn-smoke",
+      "command": "set -eu; ROOT=\"{work_dir}\"; PROJECT=\"$ROOT/projects/cnn_smoke\"; ENV=\"$ROOT/envs/cnn_smoke\"; export UV_CACHE_DIR=\"$ROOT/cache/uv\" UV_PYTHON_INSTALL_DIR=\"$ROOT/python\" UV_TOOL_DIR=\"$ROOT/tools\" UV_PROJECT_ENVIRONMENT=\"$ENV\" XDG_CONFIG_HOME=\"$ROOT/config\" TMPDIR=\"$ROOT/tmp\"; cd \"$PROJECT\"; \"$ROOT/tools/uv\" run --frozen --project \"$PROJECT\" --python 3.10 python train.py --rank {rank} --world-size {world_size} --steps 20 --batch-size 64 --output \"$ROOT/runs/cnn-{node_alias}.jsonl\"",
+      "gpus": 1,
+      "replicas": 4,
+      "min_nodes": 4,
+      "max_nodes": 4,
+      "distribution": "one-to-one",
+      "depends_on": ["setup-cnn-smoke"],
+      "uv_env": "uv",
+      "environment_check": "set -eu; ROOT=\"{work_dir}\"; PROJECT=\"$ROOT/projects/cnn_smoke\"; ENV=\"$ROOT/envs/cnn_smoke\"; UV=\"$ROOT/tools/uv\"; test -x \"$UV\"; \"$UV\" --version 2>/dev/null | grep -Eq '^uv 0\\.12\\.15([[:space:]]|$)'; test -x \"$ENV/bin/python\"; test -f \"$PROJECT/uv.lock\"; UV_CACHE_DIR=\"$ROOT/cache/uv\" UV_PYTHON_INSTALL_DIR=\"$ROOT/python\" UV_TOOL_DIR=\"$ROOT/tools\" UV_PROJECT_ENVIRONMENT=\"$ENV\" XDG_CONFIG_HOME=\"$ROOT/config\" TMPDIR=\"$ROOT/tmp\" \"$UV\" run --frozen --project \"$PROJECT\" --python 3.10 python -c 'import torch; assert torch.cuda.is_available()' >/dev/null",
+      "environment_repair_task": "setup-cnn-smoke",
+      "artifacts": [
+        {
+          "name": "cnn_smoke",
+          "kind": "source",
+          "source": "assets/examples/cnn_smoke",
+          "destination": "{work_dir}/projects/cnn_smoke"
+        }
+      ],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      },
+      "metadata": {
+        "purpose": "four independent synthetic CNN trainings, one GPU per node"
+      }
+    }
+  ]
+}

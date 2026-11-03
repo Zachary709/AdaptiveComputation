@@ -1,0 +1,29 @@
+{
+  "cluster_name": "GPU-Cluster",
+  "nodes": [
+    {
+      "alias": "GPU-01",
+      "address": "10.0.0.1",
+      "user": "ubuntu",
+      "storage_paths": ["/scratch", "/data"],
+      "environment_paths": ["~/projects"]
+    },
+    {
+      "alias": "GPU-02",
+      "address": "10.0.0.2",
+      "user": "ubuntu",
+      "storage_paths": ["/scratch", "/data"],
+      "environment_paths": ["~/projects"]
+    }
+  ],
+  "admins": {
+    "master": "ubuntu",
+    "members": ["ubuntu"]
+  },
+  "users": [],
+  "policy": {
+    "require_allocation": true,
+    "all_users_token": "*",
+    "enforcement": "detect_only"
+  }
+}

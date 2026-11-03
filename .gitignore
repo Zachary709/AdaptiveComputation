@@ -1,0 +1,64 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Python tooling
+.mypy_cache/
+.pytest_cache/
+ruff_cache/
+dist/
+build/
+.build/
+*.egg-info/
+
+# Frontend build output
+service/adaptive_service/static/
+service/frontend/tsconfig.tsbuildinfo
+
+# TUI / Node
+**/node_modules/
+**/.bun/
+# Local compiled binaries
+tui/dist/
+
+# Local state (if you place it inside the repo)
+.opensmi/
+.adaptive-computation/
+latest_snapshot.json
+
+# Local config (DO NOT COMMIT real cluster topology)
+adaptive.json
+opensmi.json
+config.json
+
+# Skill local profile (DO NOT COMMIT real server, SSH, or path values)
+skill/local.json
+skill/local/
+
+# IDE / coding-agent
+.cursor/
+.opencode/
+.openchrome/
+.pi/
+CLAUDE.md
+AGENTS.md
+AGENTS.local.md
+
+# Ralph runtime artifacts
+.ralph/
+
+# Misc
+*.log
+.dev-build-backup/
+logs/
+doc-should-fix/
+opencode-onboard-redesign.txt
+.redteam/
+.omc/
+.gitworktrees/
+.worktrees/
+.localdevtest/
+
+# Intermediate work directory
+.work/

@@ -1,0 +1,16 @@
+[project]
+name = "adaptive-cnn-smoke"
+version = "0.1.0"
+description = "Small synthetic CNN workload for adaptive multi-node smoke tests"
+requires-python = ">=3.10,<3.11"
+dependencies = [
+  "torch==1.13.1+cu116",
+]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu116" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu116"
+url = "https://download.pytorch.org/whl/cu116"
+explicit = true

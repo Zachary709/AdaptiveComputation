@@ -75,7 +75,7 @@ elsewhere. Start from the committed template `assets/local.example.json`:
   `data-path`, and `model-path` use them when `--path` is omitted.
 
 Do not copy these values into a task manifest, a command in this file, a commit,
-or a report. Every example in this skill uses `GPU-01`, `<user>`, and
+or a report. Every example in this skill uses `<alias>`, `<user>`, and
 `<data-disk>` as placeholders.
 
 ## Plan source
@@ -301,12 +301,12 @@ reads `server` from `local.json`. Do not use a public address or plain HTTP.
 
    ```bash
    "$SKILL_DIR/scripts/adaptive-runner" work-path \
-     --node GPU-01 \
+     --node <alias> \
      --reporter session-8f2c
    ```
 
-   The path comes from `nodes.GPU-01.work` in `local.json`. Pass `--path`
-   instead when the node has no entry in that file.
+   Use the alias from the snapshot. The path comes from `nodes.<alias>.work` in
+   `local.json`. Pass `--path` instead when the node has no entry in that file.
 
    The path must be absolute and on a filesystem already mounted on that node.
    The skill checks over SSH that it exists, is a directory, and is writable
@@ -319,11 +319,11 @@ reads `server` from `local.json`. Do not use a public address or plain HTTP.
    `<work_path>/models`; the skill rejects any other path:
 
    ```bash
-   "$SKILL_DIR/scripts/adaptive-runner" data-path --node GPU-01
-   "$SKILL_DIR/scripts/adaptive-runner" model-path --node GPU-01
+   "$SKILL_DIR/scripts/adaptive-runner" data-path --node <alias>
+   "$SKILL_DIR/scripts/adaptive-runner" model-path --node <alias>
    ```
 
-   The paths come from `nodes.GPU-01.data` and `nodes.GPU-01.model` in
+   The paths come from `nodes.<alias>.data` and `nodes.<alias>.model` in
    `local.json`. Without a local entry, pass `--path '<work_path>/data'` or
    `--path '<work_path>/models'` on the command line.
 
@@ -375,7 +375,7 @@ reads `server` from `local.json`. Do not use a public address or plain HTTP.
 
    ```bash
    "$SKILL_DIR/scripts/adaptive-runner" repair \
-     --node GPU-01 \
+     --node <alias> \
      --command '/<data-disk>/<user>/adaptive/tools/uv sync --frozen' \
      --check '/<data-disk>/<user>/adaptive/tools/uv run python -c "import torch"' \
      --manager uv \

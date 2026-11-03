@@ -114,7 +114,7 @@ When a task's short `environment_check` fails, the runner returns:
   "status": "failed",
   "reason": "environment_mismatch",
   "environment": {
-    "checks": [{"node_alias": "GPU-01", "status": "failed", "stderr": "..."}],
+    "checks": [{"node_alias": "<alias>", "status": "failed", "stderr": "..."}],
     "suggested_repair": "cd {work_dir}/projects/demo && uv sync --frozen"
   }
 }
@@ -125,7 +125,7 @@ the skill:
 
 ```bash
 "$SKILL_DIR/scripts/adaptive-runner" repair \
-  --node GPU-01 \
+  --node <alias> \
   --command 'UV_INSTALL_DIR=<work_path>/tools sh install-uv.sh' \
   --check '<work_path>/tools/uv run python -c "import torch"' \
   --manager uv \

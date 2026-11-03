@@ -145,12 +145,12 @@ mkdir -p .adaptive-computation
 使用某个节点之前登记固定工作目录，以及 `<work_path>/data` 与 `<work_path>/models`：
 
 ```bash
-"$SKILL_DIR/scripts/adaptive-runner" work-path --node GPU-01
-"$SKILL_DIR/scripts/adaptive-runner" data-path --node GPU-01
-"$SKILL_DIR/scripts/adaptive-runner" model-path --node GPU-01
+"$SKILL_DIR/scripts/adaptive-runner" work-path --node <alias>
+"$SKILL_DIR/scripts/adaptive-runner" data-path --node <alias>
+"$SKILL_DIR/scripts/adaptive-runner" model-path --node <alias>
 ```
 
-路径取自 `skill/local.json` 的 `nodes.GPU-01`。该文件不入库，模板见
+路径取自 `skill/local.json` 的 `nodes.<alias>`，别名用快照里的真实值。该文件不入库，模板见
 `skill/assets/local.example.json`；也可以直接在命令里用 `--path` 给出
 `<work_path>`、`<work_path>/data` 和 `<work_path>/models`。
 
@@ -165,7 +165,7 @@ skill 会先做只读检查：路径必须存在、是目录且可写；数据�
 
 ```bash
 "$SKILL_DIR/scripts/adaptive-runner" repair \
-  --node GPU-01 \
+  --node <alias> \
   --command '/data/<user>/adaptive/tools/uv sync --frozen' \
   --check '/data/<user>/adaptive/tools/uv run python -c "import torch"' \
   --manager uv --path /data/<user>/adaptive/tools/uv \

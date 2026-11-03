@@ -65,7 +65,7 @@ repair:
 
 ```bash
 "$SKILL_DIR/scripts/adaptive-runner" repair \
-  --node GPU-01 \
+  --node <alias> \
   --command '<work_path>/tools/uv sync --frozen' \
   --check '<work_path>/tools/uv run python -c "import torch"' \
   --manager uv \

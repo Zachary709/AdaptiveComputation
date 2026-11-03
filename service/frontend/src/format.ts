@@ -29,7 +29,8 @@ export function shortNodeName(alias: string | null | undefined): string {
   if (!alias) {
     return "-";
   }
-  return alias;
+  const matched = alias.match(/^lab-(\d+)(?:-|$)/);
+  return matched ? matched[1] : alias;
 }
 
 export function formatUvVersion(value: string | null | undefined): string {

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable, Dict, Optional
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse, HTMLResponse
@@ -23,12 +23,13 @@ from .api import (
 from .collector.directories import DirectoryLister
 from .collector.nvitop import NvitopManager
 from .collector.service import CollectorSettings, InventoryCollector
+from .local import load_default_plans
 from .store.db import Database
 
 
 STATIC_ROOT = Path(__file__).resolve().parent / "static"
 
-DEFAULT_PLANS = [
+EXAMPLE_PLANS = [
     {
         "plan_id": "default-single",
         "name": "单设备（两张卡）",
@@ -63,10 +64,10 @@ DEFAULT_PLANS = [
 ]
 
 
-def seed_default_plans(database: Database) -> None:
+def seed_default_plans(database: Database, plans: List[Dict[str, Any]]) -> None:
     if database.get_setting("plans_seeded"):
         return
-    for item in DEFAULT_PLANS:
+    for item in plans:
         if database.get_plan(item["plan_id"]) is not None:
             continue
         database.save_plan(
@@ -91,7 +92,7 @@ def create_app(
     settings = settings or CollectorSettings()
     database = Database(settings.database_path)
     database.init_schema()
-    seed_default_plans(database)
+    seed_default_plans(database, load_default_plans() or EXAMPLE_PLANS)
     collector = InventoryCollector(database, settings)
 
     @asynccontextmanager

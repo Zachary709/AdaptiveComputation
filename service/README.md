@@ -45,6 +45,15 @@ target. When the service exits, it removes its own serve rule.
 Use `--no-tailscale` only for local development; that mode does not create a
 serve rule and does not provide HTTPS.
 
+## Local defaults
+
+Real plan names, node aliases, and device indices belong in `service/local.json`
+next to this file. The file is listed in `.gitignore` and must never be
+committed; start from `service/local.example.json`. When the file exists, its
+`default_plans` array is seeded on the first start instead of the committed
+placeholder examples. `ADAPTIVE_SERVICE_LOCAL` points at another file. An
+existing database keeps its plans because seeding runs once per database.
+
 ## Build the board
 
 ```bash

@@ -35,6 +35,8 @@ config.json
 # Skill local profile (DO NOT COMMIT real server, SSH, or path values)
 skill/local.json
 skill/local/
+service/local.json
+service/local/
 
 # IDE / coding-agent
 .cursor/

@@ -118,6 +118,12 @@ systemctl --user enable --now adaptive-service.service
 
 ## 安装位置与代理隧道
 
+- 真实的默认计划、节点别名和设备序号写在 `service/local.json`，该文件不入库，模板见
+  `service/local.example.json`。首次启动时优先用它的 `default_plans` 建计划；数据库已有
+  计划时不会再写入。
+- 真实的服务地址、SSH 代理信息和节点路径写在 `skill/local.json`，同样不入库，模板见
+  `skill/assets/local.example.json`。
+
 - 不要安装到 `/`、`/root`、`/usr`、`/opt`、`~/.cache`、`~/.local`。uv 缓存、Python
   运行时、环境和临时文件都放在所选数据盘的工作根目录下。
 - 修复命令通过 `bash -c` 运行，不加载登录 shell。使用绝对路径或在命令里设置 `PATH`。

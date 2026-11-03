@@ -1,0 +1,35 @@
+{
+  "default_plans": [
+    {
+      "plan_id": "default-placeholder-single",
+      "name": "<single device>",
+      "scope": "static",
+      "devices": [
+        {"alias": "GPU-01", "gpu_index": 0},
+        {"alias": "GPU-01", "gpu_index": 1}
+      ]
+    },
+    {
+      "plan_id": "default-placeholder-large",
+      "name": "<large-memory single device>",
+      "scope": "static",
+      "devices": [{"alias": "GPU-01", "gpu_index": 0}]
+    },
+    {
+      "plan_id": "default-placeholder-multi",
+      "name": "<two devices>",
+      "scope": "static",
+      "devices": [
+        {"alias": "GPU-01", "gpu_index": 0},
+        {"alias": "GPU-02", "gpu_index": 0},
+        {"alias": "GPU-02", "gpu_index": 1}
+      ]
+    },
+    {
+      "plan_id": "default-placeholder-all",
+      "name": "<all devices>",
+      "scope": "all",
+      "devices": []
+    }
+  ]
+}

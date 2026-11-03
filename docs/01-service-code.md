@@ -22,6 +22,7 @@
 service/adaptive_core/            服务侧共享模型与 SSH 命令构造
 service/adaptive_service/         采集、存储、API、tailscale 发布
 service/adaptive_service/app.py   应用工厂、lifespan、静态看板托管
+service/adaptive_service/local.py 读取不入库的 local.json 默认计划
 service/adaptive_service/cli.py   命令行入口与参数
 service/adaptive_service/collector/  probe.py 负责远端只读探针，service.py 负责刷新与合并
 service/adaptive_service/store/   SQLite 结构与查询

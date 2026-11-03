@@ -78,6 +78,12 @@ Do not copy these values into a task manifest, a command in this file, a commit,
 or a report. Every example in this skill uses `<alias>`, `<user>`, and
 `<data-disk>` as placeholders.
 
+After a `git pull`, run `development/update.sh` in the repository to fetch the
+private config repository and copy `service/local.json` and `skill/local.json`
+into place. A device that only copies this skill directory needs its own
+`local.json`; without it, `work-path`, `data-path`, and `model-path` require an
+explicit `--path`.
+
 ## Plan source
 
 An executable plan must come from the resource board service.

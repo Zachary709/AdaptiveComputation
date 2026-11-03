@@ -38,6 +38,9 @@ skill/local/
 service/local.json
 service/local/
 
+# Private config checkout used by development/sync-local-config.sh
+.local-config/
+
 # IDE / coding-agent
 .cursor/
 .opencode/

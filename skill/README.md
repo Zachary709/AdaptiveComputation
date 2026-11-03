@@ -78,7 +78,9 @@ repair:
 Host-specific values stay in `local.json`. The committed template is
 `assets/local.example.json`; `local.json` itself is ignored by Git. It holds
 the service URL, the reviewed SSH proxy entry, and the `work`, `data`, and
-`model` paths for each node alias.
+`model` paths for each node alias. After a `git pull`, run
+`development/update.sh` from the repository root to sync the file from the
+private config repository.
 
 ## Commands
 

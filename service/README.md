@@ -54,6 +54,10 @@ committed; start from `service/local.example.json`. When the file exists, its
 placeholder examples. `ADAPTIVE_SERVICE_LOCAL` points at another file. An
 existing database keeps its plans because seeding runs once per database.
 
+After a `git pull`, run `development/update.sh` to fetch the private config
+repository and copy both `local.json` files into place. The startup line
+`local plans:` reports which file was loaded.
+
 ## Build the board
 
 ```bash

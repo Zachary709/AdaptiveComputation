@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional, Sequence
 
 from .collector.service import CollectorSettings
+from .local import ServiceLocalError, load_default_plans, local_path
 from .tailscale import Tailscale, TailscaleError, loopback_host
 
 
@@ -66,6 +67,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("uvicorn is required to run the resource board", file=sys.stderr)
         return 2
     settings = _settings(args)
+
+    try:
+        local_plans = load_default_plans()
+    except ServiceLocalError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    if local_plans is None:
+        print(
+            f"local plans: none at {local_path()}; using placeholder examples",
+            file=sys.stderr,
+        )
+    else:
+        print(f"local plans: {len(local_plans)} from {local_path()}")
 
     if args.reload and args.tailscale:
         print(

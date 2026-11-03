@@ -123,6 +123,9 @@ systemctl --user enable --now adaptive-service.service
   计划时不会再写入。
 - 真实的服务地址、SSH 代理信息和节点路径写在 `skill/local.json`，同样不入库，模板见
   `skill/assets/local.example.json`。
+- 两个文件由私有配置仓库保存。每次 `git pull` 后执行 `development/update.sh`，先拉公开
+  仓库，再把私有仓库的内容复制到这两个位置；只同步配置时执行
+  `development/sync-local-config.sh`。
 
 - 不要安装到 `/`、`/root`、`/usr`、`/opt`、`~/.cache`、`~/.local`。uv 缓存、Python
   运行时、环境和临时文件都放在所选数据盘的工作根目录下。

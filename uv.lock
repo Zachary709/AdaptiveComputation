@@ -65,6 +65,12 @@ requires-dist = [
 name = "adaptive-skill"
 version = "0.2.0"
 source = { editable = "skill" }
+dependencies = [
+    { name = "psutil" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "psutil", specifier = ">=5.9" }]
 
 [[package]]
 name = "annotated-doc"

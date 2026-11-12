@@ -5,14 +5,14 @@ import base64
 import json
 import logging
 import sys
-from pathlib import Path
+from importlib.resources import files
 from typing import Dict, List, Optional, Tuple
 
 
 logger = logging.getLogger(__name__)
 _BLOCKED: Dict[str, str] = {}
 _CLEANING: Dict[str, set] = {}
-RUNNER_SOURCE = Path(__file__).with_name("managed_runner.py").read_text(encoding="utf-8")
+RUNNER_SOURCE = files(__name__.rpartition(".")[0]).joinpath("managed_runner.py").read_text(encoding="utf-8")
 
 
 class ProcessCleanupError(RuntimeError):
@@ -63,11 +63,18 @@ async def run_managed(
 
     communication = asyncio.create_task(exchange())
 
+    async def wait_result() -> dict:
+        # Python 3.9 的 wait_for 会吞掉与任务完成同时发生的取消。
+        done, _ = await asyncio.wait([communication], timeout=timeout_s)
+        if not done:
+            raise asyncio.TimeoutError()
+        return communication.result()
+
     async def finish() -> None:
         proc.stdin.close()
         result = None
         try:
-            result = await asyncio.wait_for(asyncio.shield(communication), timeout=timeout_s)
+            result = await wait_result()
         except (asyncio.TimeoutError, RuntimeError, ValueError, OSError):
             pass
         if armed and (result is None or result.get("cleaned") is not True):
@@ -84,17 +91,25 @@ async def run_managed(
             raise ProcessCleanupError(_BLOCKED[target])
 
     try:
-        result = await asyncio.wait_for(asyncio.shield(communication), timeout=timeout_s)
-    except BaseException:
+        result = await wait_result()
+    except BaseException as exc:
+        cancellation = exc if isinstance(exc, asyncio.CancelledError) else None
         cleanup = asyncio.create_task(finish())
+        completion = asyncio.gather(cleanup, return_exceptions=True)
         cleaning = _CLEANING.setdefault(target, set())
         cleaning.add(cleanup)
         try:
-            while not cleanup.done():
+            while not completion.done():
                 try:
-                    await asyncio.shield(cleanup)
-                except asyncio.CancelledError:
-                    continue
+                    await asyncio.shield(completion)
+                except asyncio.CancelledError as cancelled:
+                    cancellation = cancelled
+            # 清理期间收到的取消必须继续向上传播，防止轮询任务重新进入循环。
+            if cancellation is not None:
+                cleanup_error = completion.result()[0]
+                if isinstance(cleanup_error, BaseException):
+                    raise cancellation from cleanup_error
+                raise cancellation
             cleanup.result()
         finally:
             cleaning.discard(cleanup)

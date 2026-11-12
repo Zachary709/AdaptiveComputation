@@ -1,46 +1,31 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import re
 import shlex
 import socket
 import sys
 from dataclasses import dataclass, field
-from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
+import psutil
+
 from .models import NodeConfig
+from .processes import ProcessCleanupError, RUNNER_SOURCE, run_managed
 
 
-@lru_cache(maxsize=1)
 def _local_addresses() -> Set[str]:
     """Return the set of addresses that resolve to the current machine."""
     addrs: Set[str] = {"localhost", "127.0.0.1", "::1"}
 
-    try:
-        addrs.add(socket.gethostname())
-        addrs.add(socket.getfqdn())
-    except Exception:
-        pass
-
-    try:
-        import netifaces  # type: ignore
-
-        for iface in netifaces.interfaces():
-            for family in (netifaces.AF_INET, netifaces.AF_INET6):
-                for link in netifaces.ifaddresses(iface).get(family, []):
-                    addr = link.get("addr", "")
-                    if addr:
-                        addrs.add(str(addr).split("%")[0])  # strip IPv6 zone id
-    except ImportError:
-        # netifaces not available — fall back to socket
-        try:
-            hostname = socket.gethostname()
-            for _, _, _, _, sockaddr in socket.getaddrinfo(hostname, None):
-                addrs.add(str(sockaddr[0]))
-        except Exception:
-            pass
+    addrs.add(socket.gethostname().lower())
+    addrs.add(socket.getfqdn().lower())
+    for links in psutil.net_if_addrs().values():
+        for link in links:
+            if link.family in (socket.AF_INET, socket.AF_INET6):
+                addrs.add(link.address.split("%")[0].lower())
 
     return addrs
 
@@ -52,7 +37,17 @@ def is_local_node(node: "NodeConfig") -> bool:
     network interface IPs so that SSH can be skipped in favour of direct
     subprocess execution.
     """
-    return node.address in _local_addresses()
+    address = node.address.split("%")[0].lower()
+    addresses = _local_addresses()
+    if address in addresses:
+        return True
+    try:
+        return ipaddress.ip_address(address).is_loopback
+    except ValueError:
+        try:
+            return any(str(item[4][0]).split("%")[0].lower() in addresses for item in socket.getaddrinfo(address, None))
+        except socket.gaierror:
+            return False
 
 
 _ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
@@ -137,6 +132,7 @@ async def ssh_run(
     *,
     stdin_bytes: Optional[bytes] = None,
     timeout_s: int = 15,
+    managed: bool = False,
 ) -> Tuple[int, str, str]:
     """Run a remote command over SSH.
 
@@ -148,6 +144,17 @@ async def ssh_run(
     # strip quoting before it reaches `bash -c`, so separators in a command can
     # execute outside the intended wrapper.  Quote the complete argv once.
     cmd = _ssh_base_cmd(node) + [target, shlex.join(remote_args)]
+    if managed:
+        transport = _ssh_base_cmd(node) + [f"{node.user}@{node.alias}", shlex.join(["python3", "-u", "-c", RUNNER_SOURCE])]
+        try:
+            return await run_managed(remote_args, timeout_s=timeout_s, stdin_bytes=stdin_bytes,
+                                     target=f"ssh:{node.alias}", transport=transport)
+        except asyncio.TimeoutError as exc:
+            raise SSHRunError(f"SSH timeout after {timeout_s}s; remote processes cleaned") from exc
+        except ProcessCleanupError:
+            raise
+        except RuntimeError as exc:
+            raise SSHRunError(str(exc)) from exc
 
     proc = await asyncio.create_subprocess_exec(
         *cmd,
@@ -160,9 +167,14 @@ async def ssh_run(
         stdout_b, stderr_b = await asyncio.wait_for(
             proc.communicate(stdin_bytes), timeout=timeout_s
         )
-    except asyncio.TimeoutError:
-        proc.kill()
-        raise SSHRunError(f"SSH timeout after {timeout_s}s")
+    except BaseException as exc:
+        if proc.returncode is None:
+            proc.kill()
+        await proc.communicate()
+        await proc.wait()
+        if isinstance(exc, asyncio.TimeoutError):
+            raise SSHRunError(f"SSH timeout after {timeout_s}s") from exc
+        raise
 
     rc = int(proc.returncode or 0)
     stdout = stdout_b.decode("utf-8", errors="replace")
@@ -177,6 +189,7 @@ async def ssh_run_with_retry(
     stdin_bytes: Optional[bytes] = None,
     timeout_s: int = 15,
     max_retries: int = 3,
+    managed: bool = False,
 ) -> Tuple[int, str, str]:
     """Run SSH command with exponential backoff retry on connection failures.
 
@@ -194,6 +207,7 @@ async def ssh_run_with_retry(
                 remote_args,
                 stdin_bytes=stdin_bytes,
                 timeout_s=timeout_s,
+                managed=managed,
             )
         except SSHRunError as e:
             last_error = e
@@ -233,6 +247,7 @@ async def ssh_bash_script(
     *,
     timeout_s: int = 15,
     max_retries: int = 1,
+    managed: bool = False,
 ) -> Tuple[int, str, str]:
     return await ssh_run_with_retry(
         node,
@@ -240,6 +255,7 @@ async def ssh_bash_script(
         stdin_bytes=script.encode("utf-8"),
         timeout_s=timeout_s,
         max_retries=max_retries,
+        managed=managed,
     )
 
 

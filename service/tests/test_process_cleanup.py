@@ -9,6 +9,7 @@ from pathlib import Path
 import psutil
 import pytest
 
+from adaptive_core import processes
 from adaptive_core.models import NodeConfig
 from adaptive_core.processes import run_managed
 from adaptive_core.sshutil import SSHRunError, is_local_node
@@ -70,6 +71,47 @@ def test_real_sleep_children_are_reaped_on_timeout_and_cancellation(tmp_path, pa
             if not task.done():
                 task.cancel()
                 await asyncio.gather(task, return_exceptions=True)
+            if child is not None and child.is_running():
+                child.kill()
+                child.wait(timeout=10)
+    asyncio.run(scenario())
+
+
+def test_cancellation_during_timeout_cleanup_is_preserved(tmp_path):
+    async def scenario():
+        marker = tmp_path / "command.pid"
+        target = str(tmp_path)
+        script = f"printf '%s' \"$$\" > {shlex.quote(str(marker))}; exec sleep 120"
+        operation = asyncio.create_task(run_managed(["bash", "-c", script], timeout_s=2, target=target))
+        child = supervisor = None
+        try:
+            deadline = asyncio.get_running_loop().time() + 10
+            while not marker.exists() or not marker.read_text():
+                assert asyncio.get_running_loop().time() < deadline
+                if operation.done():
+                    await operation
+                await asyncio.sleep(0.02)
+            child = psutil.Process(int(marker.read_text()))
+            supervisor = child.parent()
+            assert supervisor is not None
+            supervisor.suspend()
+            while target not in processes._CLEANING:
+                assert asyncio.get_running_loop().time() < deadline
+                if operation.done():
+                    await operation
+                await asyncio.sleep(0.02)
+            operation.cancel()
+            supervisor.resume()
+            with pytest.raises(asyncio.CancelledError):
+                await asyncio.wait_for(operation, timeout=10)
+            assert not child.is_running()
+            assert not supervisor.is_running()
+        finally:
+            if supervisor is not None and supervisor.is_running():
+                supervisor.resume()
+            if not operation.done():
+                operation.cancel()
+                await asyncio.gather(operation, return_exceptions=True)
             if child is not None and child.is_running():
                 child.kill()
                 child.wait(timeout=10)

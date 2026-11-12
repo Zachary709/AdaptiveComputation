@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import getpass
+import logging
 import os
 import uuid
 from dataclasses import dataclass, field
@@ -20,6 +21,9 @@ from .probe import (
     discover_ssh_nodes,
     node_config_from_inventory_node,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 def _csv_env(name: str) -> List[str]:
@@ -60,8 +64,10 @@ class CollectorSettings:
 
 def _default_local_node(nodes: Sequence[NodeConfig]) -> List[NodeConfig]:
     selected = list(nodes)
-    if any(is_local_node(node) for node in selected):
-        return selected
+    local_nodes = [node for node in selected if is_local_node(node)]
+    if local_nodes:
+        preferred = next((node for node in local_nodes if not node.alias.endswith("-frp")), local_nodes[0])
+        return [node for node in selected if node not in local_nodes or node is preferred]
     aliases = {node.alias for node in selected}
     alias = "local"
     suffix = 2
@@ -380,7 +386,7 @@ class InventoryCollector:
                 async with lock:
                     await self.refresh(actor="scheduler")
             except Exception:
-                continue
+                logger.exception("资源采集失败，本轮未生成新快照")
 
     async def stop(self) -> None:
         self._stopping = True

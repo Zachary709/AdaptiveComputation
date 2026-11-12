@@ -6,6 +6,7 @@ requires-python = ">=3.9"
 dependencies = [
     "fastapi>=0.110",
     "uvicorn>=0.27",
+    "psutil>=5.9",
 ]
 
 [build-system]

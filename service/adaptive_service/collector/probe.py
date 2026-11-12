@@ -22,6 +22,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
+from adaptive_core.processes import run_managed
 from adaptive_core.models import NodeConfig, node_config_from_inventory_node
 from adaptive_core.sshutil import SSHRunError, is_local_node, ssh_bash_script
 from adaptive_core.state import now_kst_iso
@@ -746,20 +747,11 @@ def _dedupe_disks(records: Iterable[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 async def _run_inventory_script(node: NodeConfig, script: str, timeout_s: int, max_retries: int) -> Tuple[int, str, str]:
     if is_local_node(node):
-        proc = await asyncio.create_subprocess_exec(
-            "bash",
-            "-s",
-            stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
         try:
-            stdout_b, stderr_b = await asyncio.wait_for(proc.communicate(script.encode("utf-8")), timeout=timeout_s)
+            return await run_managed(["bash", "-s"], stdin_bytes=script.encode("utf-8"), timeout_s=timeout_s)
         except asyncio.TimeoutError as exc:
-            proc.kill()
-            raise SSHRunError(f"local inventory script timed out after {timeout_s}s") from exc
-        return int(proc.returncode or 0), stdout_b.decode("utf-8", errors="replace"), stderr_b.decode("utf-8", errors="replace")
-    return await ssh_bash_script(node, script, timeout_s=timeout_s, max_retries=max_retries)
+            raise SSHRunError(f"local inventory script timed out after {timeout_s}s; processes cleaned") from exc
+    return await ssh_bash_script(node, script, timeout_s=timeout_s, max_retries=max_retries, managed=True)
 
 
 async def collect_node_inventory(

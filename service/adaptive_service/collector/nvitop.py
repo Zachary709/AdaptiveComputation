@@ -8,6 +8,9 @@ from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Deque, Dict, Optional
+import shlex
+
+from adaptive_core.processes import RUNNER_SOURCE, run_managed
 
 _ALIAS_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _GPU_IDLE = "idle"
@@ -351,7 +354,7 @@ class NvitopManager:
         self, alias: str, script: str, local: bool, timeout_s: float = _TIMEOUT_S
     ) -> str:
         if local:
-            command = ["bash", "-lc", script]
+            command = None
         else:
             control_path = self._control_dir / "cm-%C"
             command = [
@@ -371,20 +374,13 @@ class NvitopManager:
                 "-o",
                 "ServerAliveCountMax=2",
                 alias,
-                script,
+                shlex.join(["python3", "-u", "-c", RUNNER_SOURCE]),
             ]
-        proc = await asyncio.create_subprocess_exec(
-            *command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
         try:
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout_s)
-        except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
-            raise RuntimeError(f"命令在 {timeout_s} 秒内没有返回")
-        if proc.returncode != 0:
-            detail = stderr.decode("utf-8", errors="replace").strip()
-            raise RuntimeError(detail or f"ssh 退出码 {proc.returncode}")
-        return stdout.decode("utf-8", errors="replace")
+            rc, stdout, stderr = await run_managed(["bash", "-lc", script], timeout_s=timeout_s,
+                                                  target="local" if local else f"ssh:{alias}", transport=command)
+        except asyncio.TimeoutError as exc:
+            raise RuntimeError(f"命令在 {timeout_s} 秒内没有返回，进程已清理") from exc
+        if rc != 0:
+            raise RuntimeError(stderr.strip() or f"命令退出码 {rc}")
+        return stdout
